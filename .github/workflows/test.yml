@@ -1,0 +1,36 @@
+name: test
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare Node toolchain
+        run: docker pull node:${{ matrix.node }}-bookworm-slim
+      - name: Test core and packed CLI offline
+        run: |
+          timeout 240s docker run --rm --network none --read-only \
+            --cpus 2 --memory 512m --memory-swap 512m --pids-limit 128 \
+            --ulimit cpu=120 --ulimit fsize=67108864 \
+            --cap-drop ALL --security-opt no-new-privileges --user 1000:1000 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/source,readonly" \
+            --tmpfs /scratch:rw,exec,size=256m,uid=1000,gid=1000,mode=0700 \
+            --workdir /scratch --entrypoint env node:${{ matrix.node }}-bookworm-slim \
+            -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/scratch/home TMPDIR=/scratch/tmp \
+            npm_config_cache=/scratch/cache npm_config_offline=true \
+            npm_config_audit=false npm_config_fund=false \
+            sh -eu -c 'mkdir -p /scratch/home /scratch/tmp /scratch/project; cp -R /source/. /scratch/project/; cd /scratch/project; npm run check'

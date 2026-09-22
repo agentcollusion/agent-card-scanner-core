@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/agentcollusion/agent-card-scanner-core/blob/main/schemas/inspection.schema.json",
+  "title": "Agent Card Scanner completed inspection report 1.0",
+  "type": "object",
+  "required": ["schemaVersion", "tool", "policy", "target", "status", "decision", "blockingRuleIds", "signatureRequiredFailed", "signatures", "findings", "coverage", "limitation"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "status": { "const": "complete" },
+    "decision": { "enum": ["pass", "fail"] },
+    "tool": { "type": "object", "required": ["name", "version"], "properties": { "name": { "const": "agent-card-scanner" }, "version": { "type": "string" } } },
+    "policy": { "type": "object", "required": ["version", "failOn", "requireSignature", "keySource"], "properties": {
+      "version": { "type": "string" }, "failOn": { "enum": ["none", "low", "medium", "high", "critical"] }, "requireSignature": { "type": "boolean" }, "keySource": { "enum": ["local-jwks", "same-origin-network", "offline"] }
+    } },
+    "target": { "type": "object", "required": ["url", "name", "specGeneration", "sha256"], "properties": {
+      "url": { "type": "string" }, "name": { "type": ["string", "null"] }, "specGeneration": { "enum": ["v1", "v0.x", "unknown"] }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+    } },
+    "blockingRuleIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "signatureRequiredFailed": { "type": "boolean" },
+    "signatures": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["status", "findings"], "properties": {
+      "status": { "enum": ["unsigned", "valid", "invalid", "rejected", "unresolved"] }, "index": { "type": "integer", "minimum": 0 }, "findings": { "type": "array", "items": { "type": "string" } }, "keySource": { "enum": ["trusted", "jku"] }, "thumbprint": { "type": "string" },
+      "diagnostic": { "type": "object", "required": ["code", "verifiedProfile", "expectedProfile", "keySource", "thumbprint"], "properties": { "code": { "const": "RAW_JCS_ONLY" }, "verifiedProfile": { "const": "jcs" }, "expectedProfile": { "const": "a2a-v1.0.1-presence+jcs" }, "keySource": { "enum": ["trusted", "jku"] }, "thumbprint": { "type": "string" } }, "description": "A diagnostic match under a different payload profile, never an accepted signature or a policy pass." }
+    } } },
+    "findings": { "type": "array", "items": { "type": "object", "required": ["id", "severity", "category", "message", "evidence", "remediation", "limitation"], "properties": {
+      "id": { "type": "string", "pattern": "^AC-[A-Z]+-[0-9]+$" }, "severity": { "enum": ["info", "low", "medium", "high", "critical"] }, "category": { "enum": ["spec", "policy", "advisory"] }, "message": { "type": "string" }, "evidence": { "type": ["string", "null"] }, "remediation": { "type": "string" }, "limitation": { "type": "string" }, "path": { "type": "string" }
+    } } },
+    "coverage": { "type": "object", "required": ["coreFields", "signaturePayload", "runtimeTested", "keyRevocationChecked"], "properties": { "coreFields": { "const": "partial" }, "signaturePayload": { "enum": ["jcs", "a2a-v1.0.1-presence+jcs"] }, "runtimeTested": { "const": false }, "keyRevocationChecked": { "const": false } } },
+    "limitation": { "type": "string" },
+    "discovery": { "type": "object", "required": ["source", "attempts"], "properties": { "source": { "enum": ["explicit-url", "well-known"] }, "attempts": { "type": "integer", "minimum": 1, "maximum": 2 }, "retrievedAt": { "type": "string", "format": "date-time", "description": "UTC time when this run received the card response; key retrieval may finish later. Not an expiry or a guarantee of continuing validity." } } }
+  }
+}

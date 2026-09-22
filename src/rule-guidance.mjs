@@ -1,0 +1,22 @@
+// Machine-stable categories separate standards checks, caller policy, and context.
+export const GUIDANCE = {
+  'AC-PATH-001': ['advisory', 'Publish at /.well-known/agent-card.json and keep legacy compatibility if clients need it.', 'Legacy discovery is supported; this alone is not a security failure.'],
+  'AC-SCHEMA-001': ['spec', 'Add or correct the listed core fields using the declared A2A version.', 'Only the documented core-field subset is checked; this is not complete schema conformance.'],
+  'AC-TLS-001': ['policy', 'Use an absolute HTTPS interface URL for public deployment.', 'The advertised interface is inspected; no agent task is invoked.'],
+  'AC-HOST-001': ['advisory', 'Confirm the external interface belongs to the intended provider.', 'Shared hosting and delegated infrastructure can be legitimate.'],
+  'AC-AUTH-001': ['advisory', 'Declare authentication requirements if required, or document intentional public access.', 'An omitted declaration does not establish whether runtime access is authenticated.'],
+  'AC-AUTH-002': ['policy', 'Move API-key authentication to a header rather than a URL query parameter.', 'URLs can be recorded in infrastructure logs.'],
+  'AC-AUTH-003': ['policy', 'Replace implicit/password flows with an appropriate supported OAuth flow.', 'This checks the declaration, not the authorization server.'],
+  'AC-AUTH-004': ['policy', 'Use and declare PKCE for authorization-code flows where applicable.', 'The actual authorization server is not tested.'],
+  'AC-SKILL-001': ['advisory', 'Review the advertised skills and document their intended scope.', 'A large skill count does not establish a vulnerability.'],
+  'AC-PROV-001': ['advisory', 'Add accurate provider information to help users identify the publisher.', 'Provider text is self-declared and does not verify legal identity.'],
+  'AC-EXT-001': ['advisory', 'Review extended-card access separately with appropriate authorization.', 'The scanner does not fetch authenticated extended cards.'],
+  'AC-SIG-000': ['advisory', 'Sign the card if your relying-party policy requires integrity evidence.', 'A2A permits unsigned cards; absence alone does not fail the default policy.'],
+  'AC-SIG-001': ['policy', 'Re-sign the published card with the intended key and documented canonicalization; verify the exact resulting file.', 'A failed check can reflect a key or serialization mismatch; it is not proof of malicious behavior.'],
+  'AC-SIG-002': ['policy', 'Use a supported asymmetric signing algorithm and matching public key.', 'The verifier owns its algorithm policy.'],
+  'AC-SIG-003': ['policy', 'Serve JWKS from the card HTTPS origin, including port, and keep redirects within it.', 'Origin binding is scanner policy, not a universal A2A requirement.'],
+  'AC-SIG-004': ['advisory', 'Include a key identifier to support unambiguous key selection and rotation.', 'The verifier can still test a caller-provided key without a kid.'],
+  'AC-SIG-005': ['policy', 'Provide the intended public JWKS locally, or explicitly permit same-origin network key resolution.', 'Missing usable keys means unresolved evidence, not a proven invalid signature.'],
+  'AC-SIG-006': ['spec', 'Provide well-formed JWS fields and canonicalizable JSON without duplicate keys or invalid Unicode.', 'Malformed signatures cannot be verified.'],
+  'AC-SIG-007': ['policy', 'Use the supported JWS profile with at most eight signatures and no unsupported critical/header extensions.', 'Unsupported features are rejected rather than silently ignored.'],
+};

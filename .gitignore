@@ -1,0 +1,10 @@
+node_modules/
+*.tgz
+*.log
+.env*
+out/
+tmp/
+coverage/
+credentials/
+*.pem
+*.key
