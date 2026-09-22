@@ -1,11 +1,31 @@
 export class InputError extends Error {
   constructor(code, message) { super(message); this.code = code; this.exitCode = 2; }
 }
+export const MAX_JSON_BYTES = 524288;
+
+export function validatePublicKeys(keys) {
+  if (!Array.isArray(keys) || keys.length > 32 || Array.from(keys).some((key) =>
+    !isObject(key) || ['d', 'p', 'q', 'k', 'dp', 'dq', 'qi', 'oth'].some((field) => field in key))) {
+    throw new InputError('INVALID_JWKS', 'Use a public JWKS containing at most 32 keys and no private key material.');
+  }
+}
+
+export async function readJsonStream(stream) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of stream) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    bytes += buffer.length;
+    if (bytes > MAX_JSON_BYTES) throw new InputError('INPUT_TOO_LARGE', 'JSON exceeds the 512 KiB input limit.');
+    chunks.push(buffer);
+  }
+  return parseJson(decodeUtf8(Buffer.concat(chunks, bytes)));
+}
 export function decodeUtf8(bytes) {
   try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes); }
   catch { throw new InputError('INVALID_UTF8', 'Input must be valid UTF-8.'); }
 }
-export function parseJson(text, { maxBytes = 524288 } = {}) {
+export function parseJson(text, { maxBytes = MAX_JSON_BYTES } = {}) {
   if (Buffer.byteLength(text, 'utf8') > maxBytes) throw new InputError('INPUT_TOO_LARGE', 'JSON exceeds the 512 KiB input limit.');
   let result;
   try { result = JSON.parse(text); } catch { throw new InputError('INVALID_JSON', 'Input must be valid JSON.'); }

@@ -97,9 +97,64 @@ test('JWKS validates status, final origin, key count and expected shape', async 
   assert.equal(r.signatures[0].status, 'valid'); assert.equal(options.allowedOrigin, 'https://agent.example.com');
 });
 test('key use, algorithm and private-key mismatch cannot verify', async () => {
-  for (const k of [{ ...publicJwk, use: 'enc' }, { ...publicJwk, alg: 'ES256' }, { ...publicJwk, key_ops: ['encrypt'] }, pair.privateKey.export({ format: 'jwk' })]) {
+  for (const k of [{ ...publicJwk, use: 'enc' }, { ...publicJwk, alg: 'ES256' }, { ...publicJwk, key_ops: ['encrypt'] }]) {
     assert.notEqual((await inspectCard(signed(sample), { cardUrl: url, trustedKeys: [k] })).signatures[0].status, 'valid');
   }
+});
+
+test('library rejects invalid or private caller keys before any retrieval, even for unsigned cards', async () => {
+  for (const trustedKeys of [null, {}, [null], ['key'], Array(1), Array(33).fill(publicJwk), [pair.privateKey.export({ format: 'jwk' })], [{ kty: 'RSA', oth: [] }]]) {
+    const options = { cardUrl: url, trustedKeys, fetcher: async () => assert.fail('invalid caller keys must not trigger retrieval') };
+    await assert.rejects(inspectCard(sample, options), { code: 'INVALID_JWKS', exitCode: 2 });
+    await assert.rejects(inspectPublished('https://agent.example.com/card', options), { code: 'INVALID_JWKS', exitCode: 2 });
+  }
+});
+
+test('malformed and ambiguous interface URLs fail with a precise path and no input disclosure', async () => {
+  for (const value of ['', 'https://', 'https:/agent.example.com/a2a', 'https:///agent.example.com/a2a', 'https://agent.example.com\\secret', 'https://agent.example.com/ space', 'https://agent.example.com/\nsecret', 'https://agent.example.com/#fragment', 'https://agent.example.com/#', 'HTTPS://user:do-not-print@agent.example.com/a2a']) {
+    const report = await inspectCard({ ...sample, url: value }, { cardUrl: url });
+    assert.equal(report.decision, 'fail', value);
+    const finding = report.findings.find((f) => f.id === 'AC-URL-001');
+    assert.equal(finding.path, '/url', value);
+    assert.ok(!JSON.stringify(report).includes('do-not-print'));
+    assert.match(renderInspection(report), /At: \/url/);
+  }
+});
+
+test('HTTPS schemes are case insensitive and non-HTTPS results identify the field', async () => {
+  const secure = await inspectCard({ ...sample, url: 'HTTPS://agent.example.com/a2a' }, { cardUrl: url });
+  assert.equal(secure.decision, 'pass');
+  for (const protocol of ['http:', 'ftp:']) {
+    const report = await inspectCard({ ...sample, url: `${protocol}//agent.example.com/a2a?token=do-not-print` }, { cardUrl: url });
+    assert.equal(report.decision, 'fail');
+    assert.equal(report.findings.find((f) => f.id === 'AC-TLS-001').path, '/url');
+    assert.ok(!JSON.stringify(report).includes('do-not-print'));
+  }
+});
+
+test('every v1 and additional interface declaration retains its own JSON pointer', async () => {
+  for (const field of ['supportedInterfaces', 'supported_interfaces']) {
+    const card = { ...sample, [field]: [0, 1].map(() => ({ url: '', protocolBinding: 'JSONRPC', protocolVersion: '1.0' })) };
+    delete card.url;
+    const report = await inspectCard(card, { cardUrl: url });
+    assert.deepEqual(report.findings.filter((f) => f.id === 'AC-URL-001').map((f) => f.path), [`/${field}/0/url`, `/${field}/1/url`]);
+  }
+  const report = await inspectCard({ ...sample, additionalInterfaces: [{ url: 'https://', transport: 'JSONRPC' }] }, { cardUrl: url });
+  assert.equal(report.findings.find((f) => f.id === 'AC-URL-001').path, '/additionalInterfaces/0/url');
+});
+
+test('wrong-typed optional interface declarations are reported rather than silently discarded', async () => {
+  for (const [extra, path] of [[{ supportedInterfaces: {} }, '/supportedInterfaces'], [{ additionalInterfaces: {} }, '/additionalInterfaces'], [{ additionalInterfaces: [null] }, '/additionalInterfaces/0/url']]) {
+    const report = await inspectCard({ ...sample, ...extra }, { cardUrl: url });
+    assert.equal(report.decision, 'fail');
+    assert.ok(report.findings.find((f) => f.id === 'AC-SCHEMA-001').evidence.includes(path));
+  }
+});
+
+test('report URL redaction handles uppercase schemes in publisher text', async () => {
+  const report = await inspectCard({ ...sample, name: 'See HTTPS://user:do-not-print@agent.example.com/?token=do-not-print#hidden' }, { cardUrl: url });
+  assert.ok(!JSON.stringify(report).includes('do-not-print'));
+  assert.ok(!JSON.stringify(report).includes('#hidden'));
 });
 test('duplicate members, Unicode surrogates, depth, and nonfinite numbers are rejected', () => {
   for (const input of ['{"a":1,"a":2}', '{"a":1,"\\u0061":2}', '{"x":"\\ud800"}', '{"n":1e999}', '['.repeat(70) + '0' + ']'.repeat(70)]) assert.throws(() => parseJson(input));

@@ -3,6 +3,7 @@ export const GUIDANCE = {
   'AC-PATH-001': ['advisory', 'Publish at /.well-known/agent-card.json and keep legacy compatibility if clients need it.', 'Legacy discovery is supported; this alone is not a security failure.'],
   'AC-SCHEMA-001': ['spec', 'Add or correct the listed core fields using the declared A2A version.', 'Only the documented core-field subset is checked; this is not complete schema conformance.'],
   'AC-TLS-001': ['policy', 'Use an absolute HTTPS interface URL for public deployment.', 'The advertised interface is inspected; no agent task is invoked.'],
+  'AC-URL-001': ['policy', 'Set this field to a valid absolute HTTPS URL without credentials, fragments, whitespace or backslashes.', 'This is a static URL policy check; the advertised endpoint is not contacted.'],
   'AC-HOST-001': ['advisory', 'Confirm the external interface belongs to the intended provider.', 'Shared hosting and delegated infrastructure can be legitimate.'],
   'AC-AUTH-001': ['advisory', 'Declare authentication requirements if required, or document intentional public access.', 'An omitted declaration does not establish whether runtime access is authenticated.'],
   'AC-AUTH-002': ['policy', 'Move API-key authentication to a header rather than a URL query parameter.', 'URLs can be recorded in infrastructure logs.'],

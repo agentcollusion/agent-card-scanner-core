@@ -10,7 +10,7 @@ Inspect an A2A Agent Card, verify its signatures, and get findings with evidence
 Run the fictional offline example without installing any packages:
 
 ```sh
-git clone --branch v0.3.1 https://github.com/agentcollusion/agent-card-scanner-core.git
+git clone --branch v0.4.0 https://github.com/agentcollusion/agent-card-scanner-core.git
 cd agent-card-scanner-core
 node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.com/card.json --format text
 ```
@@ -20,7 +20,7 @@ The example passes the default policy with advisory findings for an unsigned car
 Install the CLI directly from the GitHub release tag:
 
 ```sh
-npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.3.1
+npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.4.0
 agent-card-scanner --help
 ```
 
@@ -37,6 +37,9 @@ This package is distributed through GitHub. There is no npm registry publication
 ```sh
 # Local file: no network requests by default
 agent-card-scanner verify agent-card.json --url https://your-agent.example/card.json --format text
+
+# Read a generated card from a pipeline without creating a temporary file
+cat agent-card.json | agent-card-scanner verify - --url https://your-agent.example/card.json --format text
 
 # Require a signature verified with your selected public keys
 agent-card-scanner verify agent-card.json --url https://your-agent.example/card.json --jwks public-jwks.json --require-signature
@@ -58,6 +61,8 @@ Replace the fictional domains with the card's actual publication URL. `check hos
 | 3 | Operation incomplete, such as an unreadable file or failed retrieval |
 
 Advisory findings never fail the threshold. `--require-signature` is an independent requirement. JSON is the default output; operational errors are a single JSON object on stderr.
+
+`verify -` reads standard input with the same 512 KiB byte limit, strict UTF-8 decoding and duplicate-key rejection as file input. On PowerShell, use `Get-Content -Raw -Encoding utf8 agent-card.json` instead of `cat`. Interface findings include a JSON pointer such as `/supportedInterfaces/0/url`, also shown as `At:` in text output.
 
 ## Library
 

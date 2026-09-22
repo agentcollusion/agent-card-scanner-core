@@ -15,14 +15,15 @@ const str = (v) => (typeof v === 'string' ? v : undefined);
 
 function interfacesOf(card) {
   const list = [];
-  for (const i of arr(pick(card, 'supportedInterfaces', 'supported_interfaces'))) {
-    list.push({ url: str(pick(i, 'url')), binding: str(pick(i, 'protocolBinding', 'protocol_binding')), protocolVersion: str(pick(i, 'protocolVersion', 'protocol_version')) });
+  const v1Field = card.supportedInterfaces !== undefined ? 'supportedInterfaces' : 'supported_interfaces';
+  for (const [index, i] of arr(pick(card, 'supportedInterfaces', 'supported_interfaces')).entries()) {
+    list.push({ url: str(pick(i, 'url')), binding: str(pick(i, 'protocolBinding', 'protocol_binding')), protocolVersion: str(pick(i, 'protocolVersion', 'protocol_version')), path: `/${v1Field}/${index}/url` });
   }
   const protocolVersion = str(card.protocolVersion);
-  if (str(card.url)) list.push({ url: card.url, binding: str(card.preferredTransport) || 'JSONRPC', protocolVersion });
-  for (const i of arr(card.additionalInterfaces)) list.push({ url: str(pick(i, 'url')), binding: str(pick(i, 'transport')), protocolVersion });
-  const seen = new Set();
-  return list.filter((i) => i.url && !seen.has(`${i.url}|${i.binding}`) && seen.add(`${i.url}|${i.binding}`));
+  if (typeof card.url === 'string') list.push({ url: card.url, binding: str(card.preferredTransport) || 'JSONRPC', protocolVersion, path: '/url' });
+  for (const [index, i] of arr(card.additionalInterfaces).entries()) list.push({ url: str(pick(i, 'url')), binding: str(pick(i, 'transport')), protocolVersion, path: `/additionalInterfaces/${index}/url` });
+  // Retain empty strings and duplicate declarations so every bad field has a location.
+  return list.filter((i) => i.url !== undefined);
 }
 
 function flowsOf(flows) {
@@ -74,18 +75,26 @@ export function normalizeCard(card) {
   const capabilities = isObj(card.capabilities) ? card.capabilities : {};
   const hasV1 = Array.isArray(pick(card, 'supportedInterfaces', 'supported_interfaces'));
   const schemaIssues = [];
+  const v1Field = card.supportedInterfaces !== undefined ? 'supportedInterfaces' : 'supported_interfaces';
+  if (card[v1Field] !== undefined && !hasV1) schemaIssues.push(`/${v1Field}`);
   for (const k of ['name', 'description', 'version']) if (typeof card[k] !== 'string') schemaIssues.push('/' + k);
   if (!isObj(card.capabilities)) schemaIssues.push('/capabilities');
   for (const k of ['skills', 'defaultInputModes', 'defaultOutputModes']) if (!Array.isArray(card[k])) schemaIssues.push('/' + k);
   if (hasV1) {
     const interfaces = pick(card, 'supportedInterfaces', 'supported_interfaces');
-    if (!interfaces.length) schemaIssues.push('/supportedInterfaces');
+    if (!interfaces.length) schemaIssues.push(`/${v1Field}`);
     interfaces.forEach((x, i) => {
       for (const [camel, snake] of [['url', 'url'], ['protocolBinding', 'protocol_binding'], ['protocolVersion', 'protocol_version']]) {
-        if (typeof pick(x, camel, snake) !== 'string') schemaIssues.push(`/supportedInterfaces/${i}/${camel}`);
+        if (typeof pick(x, camel, snake) !== 'string') schemaIssues.push(`/${v1Field}/${i}/${camel}`);
       }
     });
   } else if (typeof card.url !== 'string') schemaIssues.push('/url');
+  if (card.additionalInterfaces !== undefined) {
+    if (!Array.isArray(card.additionalInterfaces)) schemaIssues.push('/additionalInterfaces');
+    else card.additionalInterfaces.forEach((x, i) => {
+      if (typeof pick(x, 'url') !== 'string') schemaIssues.push(`/additionalInterfaces/${i}/url`);
+    });
+  }
   arr(card.skills).forEach((x, i) => {
     for (const k of ['id', 'name', 'description']) if (typeof pick(x, k) !== 'string') schemaIssues.push(`/skills/${i}/${k}`);
     if (!Array.isArray(pick(x, 'tags')) || x.tags.some((t) => typeof t !== 'string')) schemaIssues.push(`/skills/${i}/tags`);
