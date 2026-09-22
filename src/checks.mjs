@@ -6,6 +6,7 @@ export const RULES = {
   'AC-PATH-001': { severity: 'info', title: 'Served only at the legacy path /.well-known/agent.json' },
   'AC-SCHEMA-001': { severity: 'high', title: 'Core field is missing or has the wrong type' },
   'AC-TLS-001': { severity: 'high', title: 'An interface URL is not HTTPS' },
+  'AC-URL-001': { severity: 'high', title: 'An interface URL violates the absolute-URL policy' },
   'AC-HOST-001': { severity: 'medium', title: 'Interface host is on a different site than the card host' },
   'AC-AUTH-001': { severity: 'medium', title: 'No security scheme declared' },
   'AC-AUTH-002': { severity: 'medium', title: 'API key sent in the query string (leaks into logs and referrers)' },
@@ -34,8 +35,20 @@ export function checkCard(n, { cardUrl, legacyPath = false }) {
 
   const cardHost = hostOf(cardUrl);
   for (const i of n.interfaces) {
-    if (!String(i.url).startsWith('https://')) out.push(f('AC-TLS-001', i.url));
-    else if (!sameRegistrableDomain(hostOf(i.url), cardHost)) out.push(f('AC-HOST-001', `${cardHost} -> ${hostOf(i.url)}`));
+    let url;
+    try {
+      // URL parsing alone repairs missing slashes, whitespace and backslashes.
+      // Require an explicit authority and reject credentials/fragments as policy.
+      if (!/^[a-z][a-z\d+.-]*:\/\/[^/\\?#\s]+/i.test(i.url) || /[\u0000-\u0020\u007f\\]/.test(i.url)) throw new Error();
+      url = new URL(i.url);
+      if (!url.hostname || url.username || url.password || i.url.includes('#')) throw new Error();
+    } catch {
+      // Never echo a malformed URL that may contain credentials we cannot parse.
+      out.push({ ...f('AC-URL-001', 'Expected an absolute URL with a hostname; credentials, fragments, whitespace and backslashes are not accepted.'), path: i.path });
+      continue;
+    }
+    if (url.protocol !== 'https:') out.push({ ...f('AC-TLS-001', `Protocol: ${url.protocol}`), path: i.path });
+    else if (!sameRegistrableDomain(hostOf(url.href), cardHost)) out.push({ ...f('AC-HOST-001', `${cardHost} -> ${hostOf(url.href)}`), path: i.path });
   }
 
   if (!n.securitySchemes.length) out.push(f('AC-AUTH-001', null));

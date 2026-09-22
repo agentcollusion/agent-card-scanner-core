@@ -5,7 +5,7 @@ import { cardPayload } from './card-payload.mjs';
 import { safeFetch, publicHttpsUrl } from './safe-fetch.mjs';
 import { parseJson, isObject, decodeUtf8 } from './input.mjs';
 
-export const POLICY_VERSION = 'same-origin-v1.0.1-2026-09';
+export const POLICY_VERSION = 'same-origin-v1.0.1-2026-09-r2';
 export const ALLOWED_ALGS = new Set(['ES256', 'ES384', 'ES512', 'EdDSA', 'Ed25519', 'RS256', 'RS384', 'RS512', 'PS256', 'PS384', 'PS512']);
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 const decode = (s) => {

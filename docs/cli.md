@@ -1,12 +1,15 @@
 # CLI and inspection contract
 
-Core version: 0.3.1. Report schema: 1.0. Policy: `same-origin-v1.0.1-2026-09`.
+Core version: 0.4.0. Report schema: 1.0. Policy: `same-origin-v1.0.1-2026-09-r2`.
 
 ## Commands
 
 ```sh
 # No network, including key discovery
 agent-card-scanner verify agent-card.json --url https://agent.example/card.json --format text
+
+# Read a generated JSON card from stdin
+cat agent-card.json | agent-card-scanner verify - --url https://agent.example/card.json --format text
 
 # Keys chosen by the caller, never replaced by an embedded jku
 agent-card-scanner verify agent-card.json --url https://agent.example/card.json --jwks public-jwks.json --require-signature
@@ -32,6 +35,8 @@ Single-card options: `--format json|text` (default `json`), `--fail-on critical|
 
 Flags may precede or follow the target after the command. Unknown flags, repeats, missing values, extra targets and invalid enum/range values are errors. Prefix a filename beginning with `-` with `./`.
 
+The `verify` target `-` means standard input, read until EOF. It accepts at most 512 KiB of UTF-8 bytes, including whitespace, and rejects invalid encoding, duplicate members, excessive depth and non-finite numbers just like file input. An empty pipe is invalid JSON (exit 2). Input is never echoed on errors. `check -` is invalid usage. `--jwks` still names a local file; use `./-` to name a file literally called `-`.
+
 ## Exit and output semantics
 
 | Code | Meaning | Output |
@@ -44,6 +49,8 @@ Flags may precede or follow the target after the command. Unknown flags, repeats
 Expected errors never print a stack or the raw input. JSON is the default even when piped. `--format text` is for people; do not parse its prose. A pass means only that this run met the selected threshold. `--fail-on none` disables finding-based failure. `--require-signature` independently requires at least one accepted verification. A malformed extra signature can fail the finding threshold even when another signature verifies; the report identifies each signature by index.
 
 Findings classified `advisory` do not fail a threshold. `spec` means a documented standard-derived check; `policy` means this scanner's chosen verification/security policy. Severity does not certify exploitability. This release checks core field presence/types and selected card declarations, not the full A2A schema or all cross-field constraints.
+
+Interface URL checks parse the URL rather than matching a text prefix. `AC-URL-001` identifies malformed or empty absolute URLs, embedded credentials, fragments, whitespace, and backslashes. `AC-TLS-001` identifies a parsed non-HTTPS protocol. HTTPS schemes are case-insensitive. These findings include the source JSON pointer (`path`); text output displays it as `At:`. Invalid URL evidence omits the raw value to avoid exposing credentials. Duplicate declarations retain separate locations. Interface endpoints are never contacted by these checks. The absolute HTTPS expectation is described in the [A2A v1.0.1 AgentInterface definition](https://github.com/a2aproject/A2A/blob/v1.0.1/specification/a2a.proto); the additional exclusions are scanner policy.
 
 ## JSON report
 
@@ -73,9 +80,14 @@ Consumers must ignore unknown additive fields. Do not derive identity from displ
 - Supported key families: ES256/P-256, ES384/P-384, ES512/P-521, EdDSA or Ed25519 with Ed25519, and RS/PS256/384/512 with RSA 2048–8192 bits. Keys must agree with declared `alg`, `use`, and `key_ops` when present.
 - At most eight signatures and 32 keys; strict base64url and protected-header JSON; unsupported `crit`, `b64`, embedded `jwk`, `x5u` and `x5c` are rejected. Policy-relevant unprotected fields and duplicate protected/unprotected members are rejected.
 - With `--jwks`, only the supplied public keys are used, even if empty or unmatched. A cross-origin `jku` is still rejected under the chosen policy; callers must reconfigure the card or key publication rather than silently relax trust.
+- CLI and library entry points reject non-array key lists, non-object entries, more than 32 keys, and private/symmetric key material with `INVALID_JWKS` (exit 2 in the CLI). For public inspections this validation occurs before retrieval. A structurally accepted public key can still be unusable for the declared algorithm; that remains an unresolved verification result.
 - Remote `jku` must share the card's exact HTTPS origin, including port. Every redirect retains that boundary. Sibling subdomains are distinct; the approximate domain table used for advisory host comparisons does not grant key trust.
 - `valid` verifies integrity with the selected key; it does not prove that a named organization owns it. No independent expiration/revocation registry is consulted. Caller key governance remains necessary.
 
 ## Network bounds
 
 Each retrieval has an 8-second total deadline including DNS, redirects and body; 512 KiB body cap; at most three redirects. The transport requests identity encoding and rejects compressed responses. It checks all DNS addresses, pins a checked IP in the HTTPS connection, retains TLS hostname verification, and does not use environment proxy settings. Only global/public addresses under a conservative policy are accepted; special-purpose and transition ranges are rejected. A multi-signature check can take longer than one retrieval budget.
+
+## Migration from core 0.3.1
+
+Core 0.4.0 keeps report schema 1.0 and the signature payload profile, and revises the inspection policy identifier to `same-origin-v1.0.1-2026-09-r2`. Previously accepted malformed interface URLs and wrong-typed optional interface declarations can now fail; uppercase HTTPS schemes no longer produce a false TLS failure. Library callers supplying malformed key arrays or private keys now receive `INVALID_JWKS` rather than an unresolved/unsigned report or a type error. Rerun source cards before comparing policy outcomes. The stdin command and interface JSON pointers are additive.

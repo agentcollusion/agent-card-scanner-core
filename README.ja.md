@@ -7,7 +7,7 @@ A2A Agent Cardの基本検査と署名検証を行う、**Apache-2.0のOSS CLI�
 ## すぐ試す
 
 ```sh
-git clone --branch v0.3.1 https://github.com/agentcollusion/agent-card-scanner-core.git
+git clone --branch v0.4.0 https://github.com/agentcollusion/agent-card-scanner-core.git
 cd agent-card-scanner-core
 node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.com/card.json --format text
 ```
@@ -17,7 +17,7 @@ node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.
 GitHubのリリースタグからCLIをインストールできます。npmレジストリへの公開は行っていません。
 
 ```sh
-npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.3.1
+npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.4.0
 agent-card-scanner --help
 ```
 
@@ -36,6 +36,9 @@ agent-card-scanner --help
 # ローカルJSONをオフラインで検査
 agent-card-scanner verify agent-card.json --url https://your-agent.example/card.json --format text
 
+# パイプからJSONを渡して検査
+cat agent-card.json | agent-card-scanner verify - --url https://your-agent.example/card.json --format text
+
 # 利用者が選んだ公開鍵で署名を必須にする
 agent-card-scanner verify agent-card.json --url https://your-agent.example/card.json --jwks public-jwks.json --require-signature
 
@@ -44,6 +47,8 @@ agent-card-scanner check https://your-agent.example/card.json --format json
 ```
 
 ドメインは実際の公開URLに置き換えてください。終了コードは成功 `0`、ポリシー不適合 `1`、入力エラー `2`、取得失敗などの未完了 `3` です。検査結果・修正案の出力言語は英語です。
+
+`verify -` は標準入力を読み込みます。ファイルと同じ512 KiB制限を適用し、不正なUTF-8やJSONキーの重複を拒否します。PowerShellでは `cat` の代わりに `Get-Content -Raw -Encoding utf8 agent-card.json` を使用できます。接続先URLの問題には `/supportedInterfaces/0/url` などの場所を付け、テキストでも `At:` として表示します。
 
 ## 公開範囲と制約
 

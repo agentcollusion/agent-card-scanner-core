@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,35 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, ['src/cli.mjs', ...args], { cwd: root, encoding: 'utf8', timeout: 15000 });
 const verify = ['verify', 'examples/unsigned-card.json', '--url', 'https://agent.example.com/.well-known/agent-card.json'];
+const pipe = (input, ...options) => spawnSync(process.execPath, ['src/cli.mjs', 'verify', '-', '--url', verify[3], ...options], { cwd: root, input, encoding: 'utf8', timeout: 15000 });
+
+test('stdin and file inspection produce identical offline reports', () => {
+  const card = readFileSync(new URL('../examples/unsigned-card.json', import.meta.url));
+  const result = pipe(card);
+  assert.equal(result.status, 0); assert.equal(result.stderr, '');
+  assert.deepEqual(JSON.parse(result.stdout), JSON.parse(run(...verify).stdout));
+  const required = pipe(card, '--require-signature', '--format', 'text');
+  assert.equal(required.status, 1); assert.match(required.stdout, /Required signature:/);
+});
+
+test('stdin rejects empty, malformed, duplicate-member and invalid UTF-8 input without echoing it', () => {
+  for (const [input, code] of [['', 'INVALID_JSON'], ['{"secret":"do-not-print",', 'INVALID_JSON'], ['{"a":1,"a":2}', 'DUPLICATE_KEY'], [Buffer.from([0xc0, 0xaf]), 'INVALID_UTF8']]) {
+    const result = pipe(input);
+    assert.equal(result.status, 2); assert.equal(result.stdout, '');
+    assert.equal(JSON.parse(result.stderr).error.code, code);
+    assert.ok(!result.stderr.includes('do-not-print'));
+  }
+});
+
+test('stdin enforces the byte limit and unknown commands fail before input I/O', () => {
+  const result = pipe(Buffer.alloc(524289, 32));
+  assert.equal(result.status, 2); assert.equal(JSON.parse(result.stderr).error.code, 'INPUT_TOO_LARGE');
+  for (const command of ['constructor', '__proto__', 'toString']) {
+    const result = run(command, 'missing');
+    assert.equal(result.status, 2); assert.equal(JSON.parse(result.stderr).error.code, 'USAGE');
+  }
+  assert.equal(run('check', '-').status, 2);
+});
 test('CLI help and version are explicit successful operations', () => {
   assert.match(run('--help').stdout, /Exit codes: 0/); assert.equal(run('--version').status, 0);
 });
