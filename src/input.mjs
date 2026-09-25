@@ -26,7 +26,7 @@ export function decodeUtf8(bytes) {
   catch { throw new InputError('INVALID_UTF8', 'Input must be valid UTF-8.'); }
 }
 export function parseJson(text, { maxBytes = MAX_JSON_BYTES } = {}) {
-  if (Buffer.byteLength(text, 'utf8') > maxBytes) throw new InputError('INPUT_TOO_LARGE', 'JSON exceeds the 512 KiB input limit.');
+  if (new TextEncoder().encode(text).byteLength > maxBytes) throw new InputError('INPUT_TOO_LARGE', 'JSON exceeds the 512 KiB input limit.');
   let result;
   try { result = JSON.parse(text); } catch { throw new InputError('INVALID_JSON', 'Input must be valid JSON.'); }
   // JSON.parse accepts duplicate keys. Reject them before a signature can be interpreted ambiguously.

@@ -7,7 +7,7 @@ A2A Agent Cardの基本検査と署名検証を行う、**Apache-2.0のOSS CLI�
 ## すぐ試す
 
 ```sh
-git clone --branch v0.4.0 https://github.com/agentcollusion/agent-card-scanner-core.git
+git clone --branch v0.5.0 https://github.com/agentcollusion/agent-card-scanner-core.git
 cd agent-card-scanner-core
 node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.com/card.json --format text
 ```
@@ -17,7 +17,7 @@ node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.
 GitHubのリリースタグからCLIをインストールできます。npmレジストリへの公開は行っていません。
 
 ```sh
-npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.4.0
+npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.5.0
 agent-card-scanner --help
 ```
 
@@ -61,3 +61,11 @@ agent-card-scanner check https://your-agent.example/card.json --format json
 詳細は[英語README](README.md)、[CLI仕様](docs/cli.md)、[貢献ガイド](CONTRIBUTING.md)、[脆弱性報告](SECURITY.md)を参照してください。
 
 ライセンス: [Apache-2.0](LICENSE)。Copyright 2026 AgentCollusion。
+
+## カードの更新前後を比較する
+
+```sh
+agent-card-scanner compare before.json after.json --format text
+```
+
+0.5.0では、スキル・接続先・認証要件・入出力形式・機能の変更をオフラインで比較できます。終了コード1は変更の確認が必要という意味です。実行時の互換性を保証するものではありません。[対象と制限](docs/cli.md#compare-card-updates-locally)を確認してください。[Web版](https://scan.agentcollusion.ai/compare)もブラウザ内で処理します。
