@@ -5,7 +5,7 @@ export const COMPARISON_LIMITATION = 'Compares declared fields only. No agent is
 const own = (o, k) => Object.hasOwn(o, k);
 const pointer = (s) => String(s).replaceAll('~', '~0').replaceAll('/', '~1');
 const same = (a, b) => canonicalize(a) === canonicalize(b);
-const set = (values) => [...new Set(values.map(canonicalize))].sort().map(JSON.parse);
+const set = (values) => [...new Set(values.map(canonicalize))].sort().map(value => JSON.parse(value));
 const rest = (o, keys) => Object.fromEntries(Object.entries(o).filter(([k]) => !keys.includes(k)));
 const metadata = ['name', 'description', 'version', 'provider', 'documentationUrl', 'iconUrl', 'signatures'];
 function safe(value) {

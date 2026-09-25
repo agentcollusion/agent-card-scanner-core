@@ -10,7 +10,7 @@ Inspect an A2A Agent Card, verify its signatures, and get findings with evidence
 Run the fictional offline example without installing any packages:
 
 ```sh
-git clone --branch v0.5.0 https://github.com/agentcollusion/agent-card-scanner-core.git
+git clone --branch v0.5.1 https://github.com/agentcollusion/agent-card-scanner-core.git
 cd agent-card-scanner-core
 node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.com/card.json --format text
 ```
@@ -20,7 +20,7 @@ The example passes the default policy with advisory findings for an unsigned car
 Install the CLI directly from the GitHub release tag:
 
 ```sh
-npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.5.0
+npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.5.1
 agent-card-scanner --help
 ```
 
