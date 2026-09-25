@@ -1,17 +1,43 @@
 {
   "name": "agent-card-scanner-core",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Open-source A2A Agent Card inspection and signature verification. Offline CLI and Node.js library with zero dependencies.",
   "type": "module",
   "license": "Apache-2.0",
-  "engines": { "node": ">=22" },
-  "bin": { "agent-card-scanner": "src/cli.mjs" },
-  "exports": { ".": "./src/inspect.mjs" },
-  "files": ["src/", "examples/", "docs/cli.md", "schemas/inspection.schema.json", "README.md", "README.ja.md", "LICENSE", "NOTICE"],
-  "repository": { "type": "git", "url": "git+https://github.com/agentcollusion/agent-card-scanner-core.git" },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "agent-card-scanner": "src/cli.mjs"
+  },
+  "exports": {
+    ".": "./src/inspect.mjs"
+  },
+  "files": [
+    "src/",
+    "examples/",
+    "docs/cli.md",
+    "schemas/inspection.schema.json",
+    "README.md",
+    "README.ja.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agentcollusion/agent-card-scanner-core.git"
+  },
   "homepage": "https://github.com/agentcollusion/agent-card-scanner-core#readme",
-  "bugs": { "url": "https://github.com/agentcollusion/agent-card-scanner-core/issues" },
-  "keywords": ["a2a", "agent-card", "ai-agents", "jws", "signature-verification"],
+  "bugs": {
+    "url": "https://github.com/agentcollusion/agent-card-scanner-core/issues"
+  },
+  "keywords": [
+    "a2a",
+    "agent-card",
+    "ai-agents",
+    "jws",
+    "signature-verification"
+  ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "check:package": "node scripts/check-package.mjs",
