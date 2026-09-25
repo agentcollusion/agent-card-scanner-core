@@ -78,3 +78,5 @@ export function renderInspection(report) {
   out.push(report.limitation);
   return out.join('\n');
 }
+
+export { compareCardJson, renderComparison } from './card-comparison.mjs';

@@ -1,6 +1,6 @@
 {
   "name": "agent-card-scanner-core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Open-source A2A Agent Card inspection and signature verification. Offline CLI and Node.js library with zero dependencies.",
   "type": "module",
   "license": "Apache-2.0",

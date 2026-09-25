@@ -10,7 +10,7 @@ Inspect an A2A Agent Card, verify its signatures, and get findings with evidence
 Run the fictional offline example without installing any packages:
 
 ```sh
-git clone --branch v0.4.0 https://github.com/agentcollusion/agent-card-scanner-core.git
+git clone --branch v0.5.0 https://github.com/agentcollusion/agent-card-scanner-core.git
 cd agent-card-scanner-core
 node src/cli.mjs verify examples/unsigned-card.json --url https://agent.example.com/card.json --format text
 ```
@@ -20,7 +20,7 @@ The example passes the default policy with advisory findings for an unsigned car
 Install the CLI directly from the GitHub release tag:
 
 ```sh
-npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.4.0
+npm install -g git+https://github.com/agentcollusion/agent-card-scanner-core.git#v0.5.0
 agent-card-scanner --help
 ```
 
@@ -106,3 +106,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for changes and [SECURITY.md](SECURITY.md
 ## License
 
 [Apache License 2.0](LICENSE), copyright 2026 AgentCollusion. See [NOTICE](NOTICE). Maintained by [AgentCollusion](https://agentcollusion.ai).
+
+## Compare an Agent Card update
+
+```sh
+agent-card-scanner compare before.json after.json --format text
+```
+
+Version 0.5.0 adds an offline release checklist for changes in skill IDs, interfaces, authentication, media types and capabilities. Exit 1 requests review; it is not a runtime compatibility verdict. Use `compareCardJson(beforeText, afterText)` from the library for the same strict JSON comparison. Read the [profile and limits](docs/cli.md#compare-card-updates-locally). The hosted [comparison page](https://scan.agentcollusion.ai/compare) processes both cards in your browser.

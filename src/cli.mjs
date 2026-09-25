@@ -3,12 +3,17 @@ import { readFileSync, statSync } from 'node:fs';
 import { parseJson, isObject, InputError, decodeUtf8, MAX_JSON_BYTES, readJsonStream, validatePublicKeys } from './input.mjs';
 import { inspectCard, inspectPublished, renderInspection, TOOL_VERSION } from './inspect.mjs';
 
+import { compareCardJson, renderComparison } from './card-comparison.mjs';
+
 const HELP = `Agent Card Scanner ${TOOL_VERSION}
 Inspect A2A cards with explicit evidence, remediation, and CI policy.
 
 Usage:
   agent-card-scanner verify <card.json|-> --url <https-url> [options]
+  agent-card-scanner compare <before.json> <after.json> [--format json|text] [--fail-on changes|none]
   agent-card-scanner check <host-or-https-url> [options]
+
+Compare is always offline. Exit 1 means declarations need review (default --fail-on changes).
 
 Single-card options:
   -                        Read the card JSON from standard input (verify only)
@@ -32,14 +37,15 @@ function args(argv) {
   const commands = {
     verify: ['url', 'format', 'fail-on', 'require-signature', 'jwks', 'network'],
     check: ['format', 'fail-on', 'require-signature', 'jwks'],
+    compare: ['format', 'fail-on'],
   };
   if (!Object.hasOwn(commands, command)) throw new InputError('USAGE', 'Unknown command. Use --help.');
   const allowed = commands[command];
   const boolean = new Set(['require-signature', 'network']);
-  const flags = {}; let target;
+  const flags = {}; const targets = [];
   for (let i = 0; i < rest.length; i++) {
     const token = rest[i];
-    if (!token.startsWith('-') || (token === '-' && command === 'verify')) { if (target) throw new InputError('USAGE', 'Expected one target.'); target = token; continue; }
+    if (!token.startsWith('-') || (token === '-' && command === 'verify')) { targets.push(token); if (targets.length > (command === 'compare' ? 2 : 1)) throw new InputError('USAGE', 'Too many targets.'); continue; }
     const [name, ...inline] = token.slice(2).split('=');
     if (!token.startsWith('--') || !allowed.includes(name) || Object.hasOwn(flags, name)) throw new InputError('USAGE', 'Unknown or repeated option. Use --help.');
     if (boolean.has(name)) {
@@ -51,10 +57,16 @@ function args(argv) {
       flags[name] = value;
     }
   }
+  const [target, after] = targets;
+  if (command === 'compare' && targets.length !== 2) throw new InputError('USAGE', 'Compare requires two JSON files.');
   if (!target || (command === 'verify' && !flags.url)) throw new InputError('USAGE', 'Target and required --url are missing. Use --help.');
   if (flags.format && !['text', 'json'].includes(flags.format)) throw new InputError('USAGE', 'Unsupported output format.');
-  if (flags['fail-on'] && !['low', 'medium', 'high', 'critical', 'none'].includes(flags['fail-on'])) throw new InputError('USAGE', 'Unsupported failure threshold.');
-  return { command, target, flags };
+  if (flags['fail-on'] && !(command === 'compare' ? ['changes', 'none'] : ['low', 'medium', 'high', 'critical', 'none']).includes(flags['fail-on'])) throw new InputError('USAGE', 'Unsupported failure threshold.');
+  return { command, target, after, flags };
+}
+function fileText(path) {
+  if (statSync(path).size > MAX_JSON_BYTES) throw new InputError('INPUT_TOO_LARGE', 'File exceeds the 512 KiB input limit.');
+  return decodeUtf8(readFileSync(path));
 }
 function fileJson(path) {
   if (statSync(path).size > MAX_JSON_BYTES) throw new InputError('INPUT_TOO_LARGE', 'File exceeds the 512 KiB input limit.');
@@ -64,6 +76,11 @@ try {
   const a = args(process.argv.slice(2));
   if (a.help) process.stdout.write(HELP);
   else if (a.version) process.stdout.write(`${TOOL_VERSION}\n`);
+  else if (a.command === 'compare') {
+    const result = compareCardJson(fileText(a.target), fileText(a.after));
+    process.stdout.write((a.flags.format === 'text' ? renderComparison(result) : JSON.stringify(result, null, 2)) + '\n');
+    process.exitCode = result.decision === 'review-required' && a.flags['fail-on'] !== 'none' ? 1 : 0;
+  }
   else {
     const keys = a.flags.jwks ? fileJson(a.flags.jwks) : { keys: [] };
     validatePublicKeys(isObject(keys) ? keys.keys : undefined);

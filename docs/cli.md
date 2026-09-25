@@ -91,3 +91,24 @@ Each retrieval has an 8-second total deadline including DNS, redirects and body;
 ## Migration from core 0.3.1
 
 Core 0.4.0 keeps report schema 1.0 and the signature payload profile, and revises the inspection policy identifier to `same-origin-v1.0.1-2026-09-r2`. Previously accepted malformed interface URLs and wrong-typed optional interface declarations can now fail; uppercase HTTPS schemes no longer produce a false TLS failure. Library callers supplying malformed key arrays or private keys now receive `INVALID_JWKS` rather than an unresolved/unsigned report or a type error. Rerun source cards before comparing policy outcomes. The stdin command and interface JSON pointers are additive.
+
+## Compare card updates locally
+
+```sh
+agent-card-scanner compare before.json after.json --format text
+agent-card-scanner compare before.json after.json --fail-on none > comparison.json
+```
+
+Version 0.5.0 adds an offline comparison. Default exit 1 means covered declarations changed and need review; 0 means no covered changes; 2 is invalid/unsupported input; 3 is a file operation failure. `--fail-on none` changes only the review exit, never input errors. It cannot use URLs, stdin, keys or `--network`. Both files are strict UTF-8 JSON with a 512 KiB limit, no duplicate members, finite numbers and at most 64 nesting levels.
+
+Profile `a2a-card-changes-1` compares v0.3.0 JSON cards or v1.0 camelCase cards (same generation only). It requires typed comparison fields, unique skill IDs, known security-scheme shapes and defined requirement references. Arrays are limited to 256 entries; media-type lists to 64 strings of at most 256 characters. It is not a full schema validator. Interface addresses must be absolute HTTP(S) URLs; other address forms and cross-generation migrations require manual review.
+
+Covered: skill IDs and effective input/output modes; interface URL/binding/protocol version/tenant/preference; card and skill authentication requirements; security-scheme definitions; advertised capabilities. Skill order, mode order and OR-alternative/AND-member/scope order are ignored. v0.3 omitted preferred transport defaults to JSONRPC. In v1, omitted/empty repeated skill modes inherit defaults; an explicitly empty v0.3 skill mode list is retained. Skill authentication declarations are compared separately from card requirements; the tool does not infer tightening, weakening or a runtime authorization result.
+
+Extensions and custom fields are compared opaquely and flagged for manual review. Their values and scheme definitions are omitted from exports. Metadata (name, description, version, provider, documentation/icon URLs), skill tags/examples and signatures are excluded. Versions appear as context only. URL user information, queries and fragments are redacted after comparison, so a secret-only URL change still triggers review. Other identifiers, scopes and paths remain; review exports before sharing.
+
+JSON output is a separate `kind: "agent-card-comparison"` report with profile, before/after generation and version context, decision, changes and limitation. Every change has area, kind, before/after JSON pointers, evidence and a next action. `no-covered-changes` is not a safety or compatibility certificate; no agent is contacted and signatures are not verified.
+
+Library API: `compareCardJson(beforeText, afterText)` and `renderComparison(report)` from the package export. Text inputs retain strict duplicate-member and size checks. The private service uses this same pure module in its browser-only `/compare` page. Local comparisons are not automatically included in pilot activation counts.
+
+Profile references: [A2A v0.3.0](https://a2a-protocol.org/v0.3.0/specification/) and [A2A v1.0.1 proto](https://github.com/a2aproject/A2A/blob/v1.0.1/specification/a2a.proto). The profile is deliberately narrower than accepting every protobuf-JSON spelling.

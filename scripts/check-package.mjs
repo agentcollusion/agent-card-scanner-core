@@ -20,8 +20,8 @@ function execute(command, args, cwd = root) {
 try {
   const [archive] = JSON.parse(execute(process.execPath, [npmCli, 'pack', '--json', '--ignore-scripts', '--offline', '--pack-destination', destination]));
   const allowed = new Set([
-    ...['cli', 'inspect', 'checks', 'rule-guidance', 'normalize', 'verify', 'safe-fetch', 'input', 'jcs', 'card-payload', 'domain'].map((name) => `src/${name}.mjs`),
-    'examples/unsigned-card.json', 'docs/cli.md', 'schemas/inspection.schema.json', 'README.md', 'README.ja.md', 'LICENSE', 'NOTICE', 'package.json',
+    ...['cli', 'inspect', 'checks', 'rule-guidance', 'normalize', 'verify', 'safe-fetch', 'input', 'jcs', 'card-payload', 'domain', 'card-comparison'].map((name) => `src/${name}.mjs`),
+    'examples/unsigned-card.json', 'examples/compare-before.json', 'examples/compare-after.json', 'docs/cli.md', 'schemas/inspection.schema.json', 'README.md', 'README.ja.md', 'LICENSE', 'NOTICE', 'package.json',
   ]);
   assert.deepEqual(new Set(archive.files.map(({ path }) => path)), allowed, 'Package must contain exactly the reviewed core files');
   execute(process.execPath, [npmCli, 'install', '--prefix', destination, '--ignore-scripts', '--no-audit', '--no-fund', '--offline', join(destination, archive.filename)]);
@@ -34,5 +34,9 @@ try {
   const consumer = join(destination, 'consumer.mjs');
   writeFileSync(consumer, `import { inspectCard } from 'agent-card-scanner-core';\nimport { readFileSync } from 'node:fs';\nconst card = JSON.parse(readFileSync(new URL('./node_modules/agent-card-scanner-core/examples/unsigned-card.json', import.meta.url)));\nconsole.log((await inspectCard(card, { cardUrl: 'https://agent.example.com/card.json' })).decision);\n`);
   assert.equal(execute(process.execPath, [consumer]).trim(), 'pass');
+  const comparison = JSON.parse(execute(process.execPath, [cli, 'compare', join(installed, 'examples', 'compare-before.json'), join(installed, 'examples', 'compare-after.json'), '--fail-on', 'none']));
+  assert.equal(comparison.decision, 'review-required'); assert.ok(comparison.changes.some(x => x.area === 'skill' && x.kind === 'removed'));
+  writeFileSync(consumer, "import { compareCardJson } from 'agent-card-scanner-core';\nimport { readFileSync } from 'node:fs';\nconst before = readFileSync(new URL('./node_modules/agent-card-scanner-core/examples/compare-before.json', import.meta.url), 'utf8');\nconsole.log(compareCardJson(before, before).decision);\n");
+  assert.equal(execute(process.execPath, [consumer]).trim(), 'no-covered-changes');
   console.log(`Package verified: ${archive.entryCount} files; installed CLI and library work offline.`);
 } finally { rmSync(destination, { recursive: true, force: true }); }
